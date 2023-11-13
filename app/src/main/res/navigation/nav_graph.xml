@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.lunex.lunexcontrol.HomeFragment"
+        android:label="fragment_home"
+        tools:layout="@layout/fragment_home" >
+    </fragment>
+
+    <fragment
+        android:id="@+id/advancedFragment"
+        android:name="com.lunex.lunexcontrol.AdvancedFragment"
+        android:label="fragment_advanced"
+        tools:layout="@layout/fragment_advanced" />
+    <fragment
+        android:id="@+id/bluetoothFragment"
+        android:name="com.lunex.lunexcontrol.DeviceListFragment"
+        android:label="fragment_bluetooth"
+        tools:layout="@layout/fragment_bluetooth"/>
+
+    <fragment
+        android:id="@+id/lunexFragment"
+        android:name="com.lunex.lunexcontrol.LunexFragment"
+        android:label="fragment_lunex"
+        tools:layout="@layout/fragment_lunex" />
+
+</navigation>
