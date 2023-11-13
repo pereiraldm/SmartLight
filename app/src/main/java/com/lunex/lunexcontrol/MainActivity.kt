@@ -16,6 +16,7 @@ import android.os.Looper
 import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
@@ -88,6 +89,7 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
             humidityText.text = "$humidity %"
             resetUpdateValuesTimer()
         })
+        showWelcomeDialog()
     }
 
     fun onBtnToggleChanged(isChecked: Boolean) {
@@ -174,6 +176,26 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
     override fun onPause() {
         super.onPause()
         unregisterReceiver(bluetoothConnectionReceiver)
+    }
+
+    private fun showWelcomeDialog() {
+        val sharedPref = this.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val showDialog = sharedPref.getBoolean("ShowWelcomeDialog", true)
+
+        if (showDialog) {
+            val alertDialog = AlertDialog.Builder(this)
+            alertDialog.setTitle("Bem-vindo!")
+            alertDialog.setMessage("Assista ao vídeo de manual de uso.")
+            alertDialog.setNegativeButton("Ok") { dialog, which ->
+                // Abrir o link do vídeo
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=cHSZH9TQYQM"))
+                startActivity(intent)
+            }
+            alertDialog.setPositiveButton("Não mostrar novamente") { dialog, which ->
+                sharedPref.edit().putBoolean("ShowWelcomeDialog", false).apply()
+            }
+            alertDialog.show()
+        }
     }
 
 }
