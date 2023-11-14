@@ -191,7 +191,7 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=cHSZH9TQYQM"))
                 startActivity(intent)
             }
-            alertDialog.setPositiveButton("Não mostrar novamente") { dialog, which ->
+            alertDialog.setPositiveButton("Não mostrar novamente") { _, _ ->
                 sharedPref.edit().putBoolean("ShowWelcomeDialog", false).apply()
             }
             alertDialog.show()
