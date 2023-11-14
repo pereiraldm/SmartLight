@@ -76,7 +76,6 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
                     habilitar(advancedToggleButton)
                 }, 1000)
             }
-//            seekBar.isEnabled = isChecked
             // Notificar a MainActivity sobre a mudança de estado
             interactionListener?.onAdvancedModeToggled(isChecked)
             val sharedPref = activity?.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
