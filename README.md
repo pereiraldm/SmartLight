@@ -1,2 +1,2 @@
-# SmartLigh
+# SmartLight
  
