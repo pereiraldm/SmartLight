@@ -19,14 +19,13 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.IOException
 
-class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, BluetoothController.Listener, BluetoothDataReceiver, AdvancedFragment.AdvancedFragmentInteractionListener {
+class MainActivity : AppCompatActivity() {
     private var bluetoothService: BluetoothService? = null
     private lateinit var temperatureText: TextView
     private lateinit var humidityText: TextView
@@ -79,44 +78,21 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
         }
 
         sharedViewModel = ViewModelProvider(this)[SharedBluetoothViewModel::class.java]
-
-        sharedViewModel.temperatureData.observe(this, Observer { temp ->
+        sharedViewModel.temperatureData.observe(this) { temp ->
             temperatureText.text = "$temp ºC"
             resetUpdateValuesTimer()
-        })
+        }
 
-        sharedViewModel.humidityData.observe(this, Observer { humidity ->
+        sharedViewModel.humidityData.observe(this) { humidity ->
             humidityText.text = "$humidity %"
             resetUpdateValuesTimer()
-        })
+        }
         showWelcomeDialog()
     }
 
     fun onBtnToggleChanged(isChecked: Boolean) {
         val advancedFragment = supportFragmentManager.findFragmentByTag(AdvancedFragment::class.java.simpleName) as? AdvancedFragment
         advancedFragment?.setAdvancedToggleEnabled(!isChecked)
-    }
-
-    override fun onAdvancedModeToggled(isEnabled: Boolean) {
-        Log.d("DebugMainActivity", "onAdvancedModeToggled called with: $isEnabled")
-        val homeFragment = getHomeFragment()
-        homeFragment?.setBtnToggleEnabled(!isEnabled)
-    }
-
-    private fun getHomeFragment(): HomeFragment? {
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
-        val fragments = navHostFragment?.childFragmentManager?.fragments
-        return fragments?.firstOrNull { it is HomeFragment } as? HomeFragment
-    }
-
-    override fun onReceiveTemperature(temp: String) {
-        sharedViewModel.temperatureData.postValue(temp)
-        resetUpdateValuesTimer()
-    }
-
-    override fun onReceiveHumidity(humidity: String) {
-        sharedViewModel.humidityData.postValue(humidity)
-        resetUpdateValuesTimer()
     }
 
     private fun resetUpdateValuesTimer() {
@@ -131,16 +107,11 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
         connectedSockets?.forEach {
             try {
                 it.close()
-                Log.d("BluetoothDebug", "BluetoothFragment onResume chamado")
+                if (DEBUG) Log.d("BluetoothDebug", "BluetoothFragment onResume chamado")
             } catch (e: IOException) {
                 // Trate o erro
             }
         }
-    }
-
-    override fun sendData(data: String) {
-        // Aqui você pode implementar a lógica para lidar com os dados enviados.
-        // Por exemplo, se você quer enviar este dado via Bluetooth ou qualquer outro método.
     }
 
     private val serviceConnection = object : ServiceConnection {
@@ -152,19 +123,6 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
         override fun onServiceDisconnected(name: ComponentName?) {
             bluetoothService = null
         }
-    }
-
-    override fun onReceive(message: String) {
-        // Quando uma mensagem é recebida, você pode resetar o timer
-        resetUpdateValuesTimer()
-    }
-
-    override fun onConnected(bluetoothConnected: String) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onDisconnected() {
-        TODO("Not yet implemented")
     }
 
     override fun onResume() {
@@ -188,7 +146,7 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
             alertDialog.setMessage("Assista ao vídeo de manual de uso.")
             alertDialog.setNegativeButton("Ok") { dialog, which ->
                 // Abrir o link do vídeo
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=cHSZH9TQYQM"))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://youtu.be/IJ76DUCN6bk"))
                 startActivity(intent)
             }
             alertDialog.setPositiveButton("Não mostrar novamente") { _, _ ->
@@ -198,4 +156,7 @@ class MainActivity : AppCompatActivity(), HomeFragment.OnDataSendToActivity, Blu
         }
     }
 
+    companion object {
+        const val DEBUG = false // Mude para 'true' durante o desenvolvimento, 'false' para produção
+    }
 }

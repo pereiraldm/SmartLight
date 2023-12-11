@@ -8,7 +8,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
@@ -16,10 +15,9 @@ import android.widget.ToggleButton
 import androidx.annotation.RequiresApi
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import kotlin.math.log
+import androidx.lifecycle.ViewModelProvider
 
-class AdvancedFragment : Fragment(), BluetoothController.Listener {
+class AdvancedFragment : Fragment() {
 
     private lateinit var seekBar: SeekBar
     private lateinit var seekBarValue: TextView
@@ -27,8 +25,8 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
     private lateinit var connected_devices_advanced: TextView
     private lateinit var lampYellow: ImageView
     private lateinit var lampWhite: ImageView
-    private var interactionListener: AdvancedFragmentInteractionListener? = null
     private var isResuming = false
+    private lateinit var sharedViewModel: SharedBluetoothViewModel
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -40,7 +38,6 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         seekBar = view.findViewById(R.id.seekBar)
         seekBarValue = view.findViewById(R.id.seekBarValue)
         advancedToggleButton = view.findViewById(R.id.advancedToggleButton)
@@ -49,7 +46,7 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
         lampWhite = view.findViewById(R.id.lamp_white)
 
         val sharedPref = activity?.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-        val savedState = sharedPref?.getBoolean("AdvancedToggleState", false) ?: false
+        sharedPref?.getBoolean("AdvancedToggleState", false) ?: false
         val savedSeekBarValue = sharedPref?.getInt("SeekBarValue", 0) ?: 0
         seekBar.progress = savedSeekBarValue
         advancedToggleButton.setOnCheckedChangeListener(null)  // Temporariamente remover o listener
@@ -66,7 +63,6 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
                     val adjustedValue = getAdjustedSeekBarValue()
                     BluetoothManagerApp.getInstance().sendMessage(adjustedValue.toString())
                     seekBar.isEnabled = true
-                    updateLampsDrawable()
                 }, 1000)
             } else {
                 BluetoothManagerApp.getInstance().sendMessage("desligarAvancado")
@@ -76,8 +72,6 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
                     habilitar(advancedToggleButton)
                 }, 1000)
             }
-            // Notificar a MainActivity sobre a mudança de estado
-            interactionListener?.onAdvancedModeToggled(isChecked)
             val sharedPref = activity?.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             sharedPref?.edit()?.putBoolean("AdvancedToggleState", isChecked)?.apply()
         }
@@ -87,13 +81,21 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val adjustedProgress = progress + 3000  // Ajuste o valor para o intervalo 3000-6500
                 seekBarValue.text = "Valor: $adjustedProgress (3000 - 6500)"
-                updateLampsDrawable()
+
+
                 lampYellow.setImageResource(R.drawable.ic_quente)
                 lampWhite.setImageResource(R.drawable.ic_frio)
                 val alphaValue = (progress / 3500.0 * 255).toInt()
 
                 lampYellow.imageAlpha = 255 - alphaValue
+                if (DEBUG) Log.d(
+                    "testedebug",
+                    "lampYellow 255 - alphaValue: ${255 - alphaValue}")
                 lampWhite.imageAlpha = alphaValue
+                if (DEBUG) Log.d(
+                    "testedebug",
+                    "lampWhite alphaValue: $alphaValue"
+                )
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
@@ -128,18 +130,15 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
                 else -> {}
             }
         }
-    }
-
-    override fun onReceive(message: String) {
-        // Handle any incoming Bluetooth messages if necessary
-    }
-
-    override fun onConnected(bluetoothConnected: String) {
-        // Handle Bluetooth connection status if necessary
-    }
-
-    override fun onDisconnected() {
-        // Handle Bluetooth disconnection if necessary
+        sharedViewModel = ViewModelProvider(requireActivity())[SharedBluetoothViewModel::class.java]
+        if (!advancedToggleButton.isChecked) {
+            sharedViewModel.hotValue.observe(viewLifecycleOwner) { whiteHotValue ->
+                 updateHotState(whiteHotValue)
+            }
+            sharedViewModel.coldValue.observe(viewLifecycleOwner) { whiteColdValue ->
+                   updateColdState(whiteColdValue)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -149,27 +148,8 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
         sharedPref?.edit()?.remove("AdvancedToggleState")?.apply()
     }
 
-    override fun onReceiveTemperature(temp: String) {
-        // Implementação do método para receber a temperatura
-    }
-
-    override fun onReceiveHumidity(humidity: String) {
-        // Implementação do método para receber a umidade
-    }
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is AdvancedFragmentInteractionListener) {
-            interactionListener = context
-        }
-    }
-
     fun setAdvancedToggleEnabled(isEnabled: Boolean) {
         advancedToggleButton.isEnabled = isEnabled
-    }
-
-    interface AdvancedFragmentInteractionListener {
-        fun onAdvancedModeToggled(checked: Boolean)
     }
 
     @SuppressLint("SetTextI18n")
@@ -189,17 +169,26 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
         val sharedPref = activity?.getSharedPreferences("DeviceNames", Context.MODE_PRIVATE)
         sharedPref?.getString("ESP32test", "NOT_FOUND")
         val deviceName = getCustomDeviceName()
+
         connected_devices_advanced.text = "DISPOSITIVO CONECTADO: $deviceName"
     }
 
     private fun btConnected() {
+        advancedToggleButton.isChecked = false
+        seekBar.isEnabled = false
         advancedToggleButton.isVisible = true
         seekBar.isVisible = true
+        lampWhite.isVisible = true
+        lampYellow.isVisible = true
     }
 
     private fun btDisconnected() {
         advancedToggleButton.isVisible = false
+        advancedToggleButton.isChecked = false
+        seekBar.isEnabled = false
         seekBar.isVisible = false
+        lampWhite.isVisible = false
+        lampYellow.isVisible = false
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -221,17 +210,34 @@ class AdvancedFragment : Fragment(), BluetoothController.Listener {
         return (progress / 3500.0 * 1024).toInt()
     }
 
-    private fun updateLampsDrawable() {
-        val progress = seekBar.progress
-        val alphaValue = (progress / 3500.0 * 255).toInt()
-        lampYellow.setImageResource(R.drawable.ic_quente)
-        lampWhite.setImageResource(R.drawable.ic_frio)
-        lampYellow.imageAlpha = 255 - alphaValue
-        lampWhite.imageAlpha = alphaValue
+
+    private fun updateHotState(whiteHotValue: Int) {
+        if (whiteHotValue == 0) {
+            lampYellow.setImageResource(R.drawable.ic_desligado)
+        } else {
+            val alphaValue = mapValueToAlpha(whiteHotValue)
+            lampYellow.setImageResource(R.drawable.ic_quente)
+            lampYellow.imageAlpha = alphaValue
+        }
+    }
+
+    private fun updateColdState(whiteColdValue: Int) {
+        if (whiteColdValue == 0) {
+            lampWhite.setImageResource(R.drawable.ic_desligado)
+        } else {
+            val alphaValue = mapValueToAlpha(whiteColdValue)
+            lampWhite.setImageResource(R.drawable.ic_frio)
+            lampWhite.imageAlpha = alphaValue
+        }
+    }
+
+    private fun mapValueToAlpha(value: Int): Int {
+        // Mapeia o valor para um intervalo de transparência (por exemplo, de 0 a 255)
+        return (value / 1024.0 * 255).toInt()
     }
 
     companion object {
-        const val DEBUG = true // Mude para 'true' durante o desenvolvimento, 'false' para produção
+        const val DEBUG = false // Mude para 'true' durante o desenvolvimento, 'false' para produção
     }
 }
 
