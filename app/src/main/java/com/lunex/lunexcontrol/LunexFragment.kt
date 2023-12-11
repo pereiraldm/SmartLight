@@ -1,7 +1,6 @@
 package com.lunex.lunexcontrol
 
 import android.content.Intent
-import android.graphics.Paint
 import android.net.Uri
 import android.os.Bundle
 import androidx.fragment.app.Fragment
@@ -10,10 +9,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 
 class LunexFragment : Fragment() {
-    private lateinit var manual: TextView
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -42,7 +39,7 @@ class LunexFragment : Fragment() {
         val linearLayoutVid: LinearLayout = view.findViewById(R.id.linearLayout6)
         linearLayoutVid.setOnClickListener {
             // Quando você tiver o link do vídeo, substitua o URL abaixo.
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=cHSZH9TQYQM"))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://youtu.be/IJ76DUCN6bk"))
             startActivity(intent)
         }
 

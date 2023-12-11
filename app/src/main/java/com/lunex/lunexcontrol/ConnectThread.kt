@@ -3,13 +3,9 @@ package com.lunex.lunexcontrol
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
-import android.content.Context
-import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.google.android.material.snackbar.Snackbar
-import com.lunex.lunexcontrol.databinding.FragmentBluetoothBinding
 import java.io.IOException
 import java.util.*
 
@@ -70,20 +66,31 @@ class ConnectThread(
                 // Reset the timer every time a message is received
                 handler.removeCallbacks(disconnectRunnable)
                 handler.postDelayed(disconnectRunnable, 4000) // 5 seconds delay
-                if (message.contains("T:") && message.contains("U:")) {
-                    val temp = message.substringAfter("T:").substringBefore("º")
-                    val humidity = message.substringAfter("U:").substringBefore("%")
-
-                    // Agora, você pode enviar esses valores para o listener
-                    listener.onReceiveTemperature(temp)
-                    listener.onReceiveHumidity(humidity)
-                } else {
-                    listener.onReceive(message)
-
+                when {
+                    message.contains("H:") && message.contains("C:") -> {
+                        // Processar mensagem do estado dos LEDs
+                        val hotValue = message.substringAfter("H:").substringBefore(";")
+                        val coldValue = message.substringAfter("C:")
+                           val whiteHotValue = hotValue.toInt()
+                           val whiteColdValue = coldValue.toInt()
+                            if (DEBUG)    Log.d("testedebug", "Dados recebidos em readMessage() do ConnectThread, hotValue: $hotValue e coldValue: $coldValue")
+                            listener.onReceiveHotState(whiteHotValue)
+                            listener.onReceiveColdState(whiteColdValue)
+                    }
+                    message.contains("T:") && message.contains("U:") -> {
+                        // Processar mensagem de temperatura e umidade
+                        val temp = message.substringAfter("T:").substringBefore("º")
+                        val humidity = message.substringAfter("U:").substringBefore("%")
+                        listener.onReceiveTemperature(temp)
+                        listener.onReceiveHumidity(humidity)
+                    }
+                    else -> {
+                        // Processar outras mensagens
+                        listener.onReceive(message)
+                    }
                 }
-
             } catch (_: IOException) {
-
+                // Tratar exceção, se necessário
             }
         }
     }

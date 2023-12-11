@@ -23,6 +23,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import com.lunex.lunexcontrol.databinding.FragmentHomeBinding
 
 
@@ -41,6 +42,7 @@ class HomeFragment : Fragment() {
     private var isBound = false
     private val btManager = BluetoothManagerApp.getInstance()
     private lateinit var binding: FragmentHomeBinding
+    private lateinit var sharedViewModel: SharedBluetoothViewModel
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -78,7 +80,6 @@ class HomeFragment : Fragment() {
         nomeTextView = view.findViewById(R.id.connected_devices)
 
         btnToggle.setOnClickListener{
-            turnOffLamps()
             btManager.sendMessage("00")
             desabilitar(btnQuente)
             desabilitar(btnFrio)
@@ -93,8 +94,6 @@ class HomeFragment : Fragment() {
         }
         // Listener para o botão Frio
         btnFrio.setOnClickListener {
-            turnOnWhiteLamp()
-            turnOffYellowLamp()
             btManager.sendMessage("01")
             desabilitar(btnQuente)
             desabilitar(btnFrio)
@@ -110,8 +109,6 @@ class HomeFragment : Fragment() {
 
         // Listener para o botão Neutro
         btnNeutro.setOnClickListener {
-            turnOnWhiteLamp()
-            turnOnYellowLamp()
             btManager.sendMessage("11")
             desabilitar(btnQuente)
             desabilitar(btnFrio)
@@ -127,8 +124,6 @@ class HomeFragment : Fragment() {
 
         // Listener para o botão Quente
         btnQuente.setOnClickListener {
-            turnOffWhiteLamp()
-            turnOnYellowLamp()
             btManager.sendMessage("10")
             desabilitar(btnQuente)
             desabilitar(btnFrio)
@@ -172,42 +167,39 @@ class HomeFragment : Fragment() {
                 else -> {}
             }
         }
-    }
 
-    private fun turnOffLamps() {
-        lampWhite.setImageResource(R.drawable.ic_desligado)
-        lampYellow.setImageResource(R.drawable.ic_desligado)
-    }
-
-    private fun turnOnWhiteLamp() {
-        lampWhite.setImageResource(R.drawable.ic_frio)
-    }
-
-    private fun turnOffWhiteLamp() {
-        lampWhite.setImageResource(R.drawable.ic_desligado)
-    }
-
-    private fun turnOnYellowLamp() {
-        lampYellow.setImageResource(R.drawable.ic_quente)
-    }
-
-    private fun turnOffYellowLamp() {
-        lampYellow.setImageResource(R.drawable.ic_desligado)
-    }
-
-    interface OnDataSendToActivity {
-        fun sendData(data: String)
-    }
-
-    private var dataSendToActivity: OnDataSendToActivity? = null
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnDataSendToActivity) {
-            dataSendToActivity = context
-        } else {
-            throw ClassCastException("$context must implement OnDataSendToActivity")
+        sharedViewModel = ViewModelProvider(requireActivity())[SharedBluetoothViewModel::class.java]
+        sharedViewModel.hotValue.observe(viewLifecycleOwner) { whiteHotValue ->
+            updateHotState(whiteHotValue)
         }
+        sharedViewModel.coldValue.observe(viewLifecycleOwner) { whiteColdValue ->
+            updateColdState(whiteColdValue)
+        }
+    }
+
+    private fun updateHotState(whiteHotValue: Int) {
+        if (whiteHotValue == 0) {
+            lampYellow.setImageResource(R.drawable.ic_desligado)
+        } else {
+            val alphaValue = mapValueToAlpha(whiteHotValue)
+            lampYellow.setImageResource(R.drawable.ic_quente)
+            lampYellow.imageAlpha = alphaValue
+        }
+    }
+
+    private fun updateColdState(whiteColdValue: Int) {
+        if (whiteColdValue == 0) {
+            lampWhite.setImageResource(R.drawable.ic_desligado)
+        } else {
+            val alphaValue = mapValueToAlpha(whiteColdValue)
+            lampWhite.setImageResource(R.drawable.ic_frio)
+            lampWhite.imageAlpha = alphaValue
+        }
+    }
+
+    private fun mapValueToAlpha(value: Int): Int {
+        // Mapeia o valor para um intervalo de transparência (por exemplo, de 0 a 255)
+        return (value / 1024.0 * 255).toInt()
     }
 
     private val bluetoothStateReceiver = object : BroadcastReceiver() {
@@ -230,16 +222,12 @@ class HomeFragment : Fragment() {
         super.onDestroy()
         activity?.unregisterReceiver(bluetoothStateReceiver)
     }
+
     override fun onResume() {
         super.onResume()
         val advancedFragment = activity?.supportFragmentManager?.findFragmentByTag(AdvancedFragment::class.java.simpleName) as? AdvancedFragment
         val isAdvancedToggleChecked = advancedFragment?.advancedToggleButton?.isChecked ?: false
         setBtnToggleEnabled(!isAdvancedToggleChecked)
-    }
-
-    override fun onPause() {
-        super.onPause()
-//        activity?.unregisterReceiver(bluetoothStateReceiver)
     }
 
     override fun onStart() {
@@ -274,13 +262,13 @@ class HomeFragment : Fragment() {
         val defaultAddress = BluetoothManagerApp.getInstance().getConnectedDeviceAddress()
 
         // Adicionando mensagem de log para monitorar o valor de defaultAddress
-        Log.d("CustomDeviceNameDebug", "Valor de defaultAddress: $defaultAddress")
+        if (DEBUG) Log.d("CustomDeviceNameDebug", "Valor de defaultAddress: $defaultAddress")
 
         val sharedPref = activity?.getSharedPreferences("DeviceNames", Context.MODE_PRIVATE)
         val customName = sharedPref?.getString(defaultAddress, "-") ?: "-"
 
         // Adicionando mensagem de log para monitorar o valor final de customName
-        Log.d("CustomDeviceNameDebug", "Nome do dispositivo customizado: $customName")
+        if (DEBUG) Log.d("CustomDeviceNameDebug", "Nome do dispositivo customizado: $customName")
 
         return customName
     }
@@ -299,8 +287,8 @@ class HomeFragment : Fragment() {
         // Adicione esta linha para exibir uma mensagem de log
     }
 
-    fun setBtnToggleEnabled(isEnabled: Boolean) {
-        Log.d("DebugHomeFragment", "setBtnToggleEnabled called with: $isEnabled")
+    private fun setBtnToggleEnabled(isEnabled: Boolean) {
+        if (DEBUG) Log.d("DebugHomeFragment", "setBtnToggleEnabled called with: $isEnabled")
         btnToggle.isEnabled = isEnabled
         btnFrio.isEnabled = isEnabled
         btnNeutro.isEnabled = isEnabled
@@ -308,7 +296,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun btConnected() {
-        Log.d("DebugHomeFragment", "btConnected called")
+        if (DEBUG) Log.d("DebugHomeFragment", "btConnected called")
         btnToggle.isVisible = true
         btnQuente.isVisible = true
         btnNeutro.isVisible = true
@@ -318,7 +306,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun btDisconnected() {
-        Log.d("DebugHomeFragment", "btDisconnected called")
+        if (DEBUG) Log.d("DebugHomeFragment", "btDisconnected called")
         btnToggle.isVisible = false
         btnQuente.isVisible = false
         btnNeutro.isVisible = false
@@ -339,5 +327,9 @@ class HomeFragment : Fragment() {
         button.isEnabled = true
         context?.let { button.setTextColor(it.getColor(R.color.azul_padrao)) }
         context?.let { button.setBackgroundColor(it.getColor(R.color.laranja_padrao)) }
+    }
+
+    companion object {
+        const val DEBUG = true // Mude para 'true' durante o desenvolvimento, 'false' para produção
     }
 }

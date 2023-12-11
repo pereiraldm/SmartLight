@@ -146,10 +146,6 @@ class DeviceListFragment : Fragment(), ItemAdapter.Listener, BluetoothController
         }
     }
 
-    companion object {
-        const val DEBUG = false // Mude para 'true' durante o desenvolvimento, 'false' para produção
-    }
-
     @SuppressLint("SetTextI18n")
     override fun onReceive(message: String) {
         activity?.runOnUiThread {
@@ -349,15 +345,27 @@ class DeviceListFragment : Fragment(), ItemAdapter.Listener, BluetoothController
         sharedViewModel.humidityData.postValue(humidity)
     }
 
+    override fun onReceiveHotState(whiteHotValue: Int) {
+        if (DEBUG) Log.d("testedebug", "Antes do sharedViewModel.hotValue.postValue(whiteHotValue). whiteHotValue: $whiteHotValue em DeviceListFragment")
+        sharedViewModel.hotValue.postValue(whiteHotValue)
+        if (DEBUG) Log.d("testedebug", "Depois do sharedViewModel.hotValue.postValue(whiteHotValue). whiteHotValue: $whiteHotValue em DeviceListFragment")
+    }
+
+    override fun onReceiveColdState(whiteColdValue: Int) {
+        if (DEBUG) Log.d("testedebug", "Antes do sharedViewModel.coldValue.postValue(whiteColdValue). whiteColdValue: $whiteColdValue em DeviceListFragment")
+        sharedViewModel.coldValue.postValue(whiteColdValue)
+        if (DEBUG) Log.d("testedebug", "Depois do sharedViewModel.coldValue.postValue(whiteColdValue). whiteColdValue: $whiteColdValue em DeviceListFragment")
+    }
+
     private fun updateConnectButtonState() {
         activity?.runOnUiThread {
             if (isConnected) {
-                if (DEBUG)  Log.d("DebugLunex", "estado do isConnected: ${isConnected} no updateConnectButtonState()")
+                if (DEBUG)  Log.d("DebugLunex", "estado do isConnected: $isConnected no updateConnectButtonState()")
                 binding.connect.text = "Desconectar"
                 binding.connect.backgroundTintList = AppCompatResources
                     .getColorStateList(requireContext(), R.color.red)
             } else {
-                if (DEBUG)  Log.d("DebugLunex", "estado do isConnected: ${isConnected} no updateConnectButtonState()")
+                if (DEBUG)  Log.d("DebugLunex", "estado do isConnected: $isConnected no updateConnectButtonState()")
                 binding.connect.text = "Conectar"
                 binding.connect.backgroundTintList = AppCompatResources
                     .getColorStateList(requireContext(), R.color.green)
@@ -365,4 +373,7 @@ class DeviceListFragment : Fragment(), ItemAdapter.Listener, BluetoothController
         }
     }
 
+    companion object {
+        const val DEBUG = false // Mude para 'true' durante o desenvolvimento, 'false' para produção
+    }
 }

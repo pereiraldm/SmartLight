@@ -21,13 +21,9 @@ import java.io.IOException
 import java.util.UUID
 
 class BluetoothService : Service() {
-    var isConnected = false
+    private var isConnected = false
     private val binder = LocalBinder()
     private val btManager = BluetoothManagerApp.getInstance()
-
-    companion object {
-        const val NOTIFICATION_ID = 1
-    }
 
     private val bluetoothAdapter: BluetoothAdapter?
         get() {
@@ -64,7 +60,6 @@ class BluetoothService : Service() {
 
     override fun onBind(intent: Intent?): IBinder {
         return binder
-//        return null
     }
 
     @SuppressLint("MissingPermission")
@@ -86,7 +81,7 @@ class BluetoothService : Service() {
         val socket: BluetoothSocket? = try {
             device.createRfcommSocketToServiceRecord(uuid)
         } catch (e: IOException) {
-            Log.e("BluetoothDebug", "Erro ao criar o socket RFComm", e)
+            if (DEBUG) Log.e("BluetoothDebug", "Erro ao criar o socket RFComm", e)
             null
         }
 
@@ -95,15 +90,15 @@ class BluetoothService : Service() {
                 it.connect()
                 connectedSockets.add(it)
                 isConnected = true
-                Log.d("BluetoothDebug", "Conexão estabelecida com sucesso com ${device.name}")
+                if (DEBUG) Log.d("BluetoothDebug", "Conexão estabelecida com sucesso com ${device.name}")
                 btManager.setConnectedDeviceName(device.name)
             } catch (e: IOException) {
-                Log.e("BluetoothDebug", "Erro ao conectar ao dispositivo ${device.name}", e)
+                if (DEBUG) Log.e("BluetoothDebug", "Erro ao conectar ao dispositivo ${device.name}", e)
                 btManager.setConnectedDeviceName(null)
                 try {
                     it.close()
                 } catch (e2: IOException) {
-                    Log.e("BluetoothDebug", "Erro ao fechar o socket", e2)
+                    if (DEBUG) Log.e("BluetoothDebug", "Erro ao fechar o socket", e2)
                 }
             }
         }
@@ -117,7 +112,7 @@ class BluetoothService : Service() {
                 isConnected = false
                 btManager.setConnectedDeviceName(null)
             } catch (e: IOException) {
-                Log.e("BluetoothDebug", "Erro ao fechar o socket", e)
+                if (DEBUG) Log.e("BluetoothDebug", "Erro ao fechar o socket", e)
             }
         }
         connectedSockets.clear()
@@ -130,6 +125,11 @@ class BluetoothService : Service() {
 
     inner class LocalBinder : Binder() {
         fun getService(): BluetoothService = this@BluetoothService
+    }
+
+    companion object {
+        const val NOTIFICATION_ID = 1
+        const val DEBUG = false // Mude para 'true' durante o desenvolvimento, 'false' para produção
     }
 }
 

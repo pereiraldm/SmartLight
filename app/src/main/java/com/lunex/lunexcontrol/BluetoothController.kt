@@ -17,6 +17,7 @@ class BluetoothController(private val adapter: BluetoothAdapter) {
     @Volatile private var isConnected: Boolean = false
     @Volatile private var isDisconnecting: Boolean = false
 
+
     @SuppressLint("MissingPermission")
     fun connect(mac: String, listener: Listener) {
         if (adapter.isEnabled && mac.isNotEmpty()) {
@@ -62,6 +63,16 @@ class BluetoothController(private val adapter: BluetoothAdapter) {
                 override fun onReceiveHumidity(humidity: String) {
                     listener.onReceiveHumidity(humidity)
                 }
+
+                override fun onReceiveHotState(whiteHotValue: Int) {
+                    if (DEBUG)    Log.d("testedebug", "log no onReceiveHotState do BluetoothController")
+                    listener.onReceiveHotState(whiteHotValue)
+                }
+
+                override fun onReceiveColdState(whiteColdValue: Int) {
+                    if (DEBUG)    Log.d("testedebug", "log no onReceiveColdState do BluetoothController")
+                    listener.onReceiveColdState(whiteColdValue)
+                }
             })
             connectThread?.start()
         }
@@ -71,15 +82,6 @@ class BluetoothController(private val adapter: BluetoothAdapter) {
     fun sendMessage(message: String){
         connectThread?.sendMessage(message)
     }
-
-//    @Synchronized
-//    fun disconnect() {
-//       if (DEBUG) Log.d("DebugLunex", "disconnect() no BluetoothController")
-//        connectThread?.closeConnection()
-//        BluetoothManagerApp.getInstance().handleDisconnection()
-//        BluetoothManagerApp.getInstance().setConnectedDeviceName(null)
-//        isConnected = false
-//    }
 
     fun disconnect() {
         synchronized(this) {
@@ -126,5 +128,7 @@ class BluetoothController(private val adapter: BluetoothAdapter) {
         fun onDisconnected()
         fun onReceiveTemperature(temp: String)
         fun onReceiveHumidity(humidity: String)
+        fun onReceiveHotState(whiteHotValue: Int)
+        fun onReceiveColdState(whiteColdValue: Int)
     }
 }
